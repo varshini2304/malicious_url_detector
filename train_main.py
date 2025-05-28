@@ -4,8 +4,14 @@ import torch.optim as optim
 from models.transformer import TransformerClassifier
 from utils.preprocessing import build_dataloaders, build_char_to_idx
 
-def train_model(model, train_loader, val_loader, criterion, optimizer, device, epochs):
+import copy
+
+def train_model(model, train_loader, val_loader, criterion, optimizer, device, epochs, patience=3):
     model.to(device)
+    best_val_acc = 0
+    best_model_wts = copy.deepcopy(model.state_dict())
+    epochs_no_improve = 0
+
     for epoch in range(epochs):
         model.train()
         total_loss = 0
@@ -29,7 +35,43 @@ def train_model(model, train_loader, val_loader, criterion, optimizer, device, e
         train_accuracy = correct / total
         print(f"Epoch {epoch+1}/{epochs}, Loss: {total_loss:.4f}, Accuracy: {train_accuracy:.4f}")
 
-        evaluate_model(model, val_loader, criterion, device)
+        val_accuracy = evaluate_model(model, val_loader, criterion, device)
+
+        # Early stopping
+        if val_accuracy is not None and val_accuracy > best_val_acc:
+            best_val_acc = val_accuracy
+            best_model_wts = copy.deepcopy(model.state_dict())
+            epochs_no_improve = 0
+        else:
+            epochs_no_improve += 1
+            if epochs_no_improve >= patience:
+                print(f"Early stopping at epoch {epoch+1}")
+                break
+
+    # Load best model weights
+    model.load_state_dict(best_model_wts)
+    return model
+
+def evaluate_model(model, val_loader, criterion, device):
+    model.eval()
+    val_loss = 0
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for inputs, labels in val_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+
+            val_loss += loss.item()
+            preds = outputs.argmax(dim=1)
+            correct += (preds == labels).sum().item()
+            total += labels.size(0)
+
+    val_accuracy = correct / total
+    print(f"Validation Loss: {val_loss:.4f}, Accuracy: {val_accuracy:.4f}")
+    return val_accuracy
 
 def evaluate_model(model, val_loader, criterion, device):
     model.eval()

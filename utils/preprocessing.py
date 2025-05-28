@@ -9,7 +9,7 @@ import math
 from collections import Counter
 
 # Global variables
-accepted_chars = '0123456789abcdefghijklmnopqrstuvwxyz!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
+accepted_chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~'
 splits_chars = ['://', '//', '/', '.', '_', '=', '-']
 n_letters = len(accepted_chars)
 
@@ -62,13 +62,30 @@ def load_data(file_path, url_num=10000, num_classes=2):
     urls = np.array(urls)
     labels = np.array(labels)
 
-    # Sample data
-    if url_num < len(urls):
-        indices = np.random.permutation(len(urls))[:url_num]
-        urls = urls[indices]
-        labels = labels[indices]
+    # Sample data with uniform distribution per class
+    if url_num < len(urls) and num_classes > 2:
+        samples_per_class = url_num // num_classes
+        sampled_urls = []
+        sampled_labels = []
+        for class_label in range(num_classes):
+            class_indices = np.where(labels == class_label)[0]
+            if len(class_indices) > samples_per_class:
+                selected_indices = np.random.choice(class_indices, samples_per_class, replace=False)
+            else:
+                selected_indices = class_indices
+            sampled_urls.extend(urls[selected_indices])
+            sampled_labels.extend(labels[selected_indices])
+        urls = np.array(sampled_urls)
+        labels = np.array(sampled_labels)
+    else:
+        # Sample data randomly if binary classification or url_num >= dataset size
+        if url_num < len(urls):
+            indices = np.random.permutation(len(urls))[:url_num]
+            urls = urls[indices]
+            labels = labels[indices]
 
     return urls, labels
+
 
 def build_dataloaders(file_path, url_num=10000, batch_size=32, max_len=200, num_classes=2):
     urls, labels = load_data(file_path, url_num, num_classes)

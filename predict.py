@@ -9,7 +9,7 @@ def load_model(path, device):
         num_heads=4,
         d_ff=512,
         num_layers=2,
-        num_classes=2,
+        num_classes=4,
         dropout=0.1,
         max_len=200
     )

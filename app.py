@@ -6,14 +6,14 @@ from utils.preprocessing import build_char_to_idx
 app = Flask(__name__)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-checkpoint = torch.load("malicious_url_detector/saved_model/transformer_model.pth", map_location=device)
+checkpoint = torch.load("malicious_url_detector/saved_model/transformer_model.pth", map_location=device, weights_only=True)
 model = TransformerClassifier(
     vocab_size=len(checkpoint['char2idx']) + 1,
     d_model=128,
     num_heads=4,
     d_ff=512,
     num_layers=2,
-    num_classes=2,
+    num_classes=4,
     dropout=0.1,
     max_len=200
 )
@@ -38,7 +38,7 @@ def home():
             with torch.no_grad():
                 output = model(input_tensor)
             pred_class = torch.argmax(output, dim=1).item()
-            class_names = {0: "BENIGN", 1: "MALICIOUS"}
+            class_names = {0: "BENIGN", 1: "MALWARE", 2: "PHISHING", 3: "DEFACEMENT"}
             result = class_names.get(pred_class, 'UNKNOWN')
     return render_template('index.html', result=result)
 
