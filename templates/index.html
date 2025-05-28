@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Malicious URL Detector</title>
+</head>
+<body>
+    <h2>Enter a URL to Check if it's Malicious</h2>
+    <form method="post">
+        <input type="text" name="url" placeholder="https://example.com" required>
+        <button type="submit">Check</button>
+    </form>
+    {% if result %}
+    <h3>Prediction: {{ result }}</h3>
+    {% endif %}
+</body>
+</html>
