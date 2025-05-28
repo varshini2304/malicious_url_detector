@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 import torch
 from models.transformer import TransformerClassifier
 from utils.preprocessing import build_char_to_idx
@@ -22,33 +22,25 @@ model.to(device)
 model.eval()
 char2idx = checkpoint['char2idx']
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def home():
-    return '''
-    <h2>Enter a URL to Check if it's Malicious</h2>
-    <form method="POST" action="/predict">
-        <input type="text" name="url" placeholder="https://example.com" size="50">
-        <input type="submit" value="Check">
-    </form>
-    '''
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    url = request.form.get('url')
-    if not url:
-        return jsonify({'error': 'No URL provided'}), 400
-    encoded = [char2idx.get(c, 0) for c in url.lower()]
-    max_len = 200
-    if len(encoded) > max_len:
-        encoded = encoded[:max_len]
-    else:
-        encoded += [0] * (max_len - len(encoded))
-    input_tensor = torch.tensor([encoded]).to(device)
-    with torch.no_grad():
-        output = model(input_tensor)
-    pred_class = torch.argmax(output, dim=1).item()
-    class_names = {0: "BENIGN", 1: "MALICIOUS"}
-    return jsonify({'url': url, 'prediction': class_names.get(pred_class, 'UNKNOWN'), 'class': pred_class})
+    result = None
+    if request.method == 'POST':
+        url = request.form.get('url')
+        if url:
+            encoded = [char2idx.get(c, 0) for c in url.lower()]
+            max_len = 200
+            if len(encoded) > max_len:
+                encoded = encoded[:max_len]
+            else:
+                encoded += [0] * (max_len - len(encoded))
+            input_tensor = torch.tensor([encoded]).to(device)
+            with torch.no_grad():
+                output = model(input_tensor)
+            pred_class = torch.argmax(output, dim=1).item()
+            class_names = {0: "BENIGN", 1: "MALICIOUS"}
+            result = class_names.get(pred_class, 'UNKNOWN')
+    return render_template('index.html', result=result)
 
 if __name__ == '__main__':
     app.run(debug=True)
